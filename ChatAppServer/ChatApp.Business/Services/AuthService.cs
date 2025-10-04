@@ -1,6 +1,8 @@
 ﻿using ChatApp.Business.Interfaces;
+using ChatApp.Business.Results;
 using ChatApp.Data.Entities;
 using ChatApp.Data.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using BCryptNet = BCrypt.Net.BCrypt;
 
 
@@ -11,21 +13,28 @@ public class AuthService(IUserRepository userRepo, TokenManager tokenManager) : 
     private readonly IUserRepository _userRepo = userRepo;
     private readonly TokenManager _tokenManager = tokenManager;
 
-    public async Task<UserEntity> RegisterAsync(string username, string password)
+    public async Task<ServiceResult> RegisterAsync(string username, string password)
     {
 
         var existingUser = await _userRepo.ExistsAsync(u => u.Username == username);
         if (existingUser == true)
-            throw new InvalidOperationException("Username already taken");
+            return new ServiceResult { Success = false, Message = "Username already exists" };
         var hash = HashPassword(password);
         var user = new UserEntity
         {
             Username = username,
             PasswordHash = hash,
             CreatedAt = DateTime.UtcNow
-        };
-        await _userRepo.AddAsync(user);
-        return user;
+        }; 
+        try
+        {
+            await _userRepo.AddAsync(user);
+            return new ServiceResult { Success = true, Message = "User created successfully" };
+        }
+        catch (DbUpdateException)
+        {
+            return new ServiceResult { Success = false, Message = "Error creating user" };
+        }
     }
 
     public async Task<string> LoginAsync(string username, string password)

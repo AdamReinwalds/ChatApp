@@ -1,5 +1,9 @@
 using ChatApp.API.Hubs;
+using ChatApp.Business.Interfaces;
+using ChatApp.Business.Services;
 using ChatApp.Data;
+using ChatApp.Data.Interfaces;
+using ChatApp.Data.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -31,13 +35,15 @@ public class Program
         {
             options.TokenValidationParameters = new TokenValidationParameters
             {
-                ValidateIssuer = false,
-                ValidateAudience = false,
+                ValidateIssuer = true,
+                ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                ValidAudience = builder.Configuration["Jwt:Audience"],
                 IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration.GetSection("Jwt")["Key"] ?? throw new KeyNotFoundException("Privat nyckel saknas"))
-              )
+                    Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new KeyNotFoundException("Privat nyckel saknas"))
+              ),
             };
 
             // JWT skickas i querystring för SignalR
@@ -56,8 +62,20 @@ public class Program
             };
         }); 
 
-        builder.Services.AddSignalR();
+        builder.Services.AddScoped<IUserRepository, UserRepository>();
+        builder.Services.AddScoped<IMessageRepository, MessageRepository>();
+        builder.Services.AddScoped<IChannelRepository, ChannelRepository>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IChannelService, ChannelService>();
 
+
+
+        builder.Services.AddScoped<TokenManager>();
+
+
+        builder.Services.AddControllers();
+        builder.Services.AddSignalR();
+        builder.Services.AddAuthorization();
 
         var app = builder.Build();
 
@@ -65,9 +83,11 @@ public class Program
         {
             app.UseHttpsRedirection();
         }
-
         app.UseRouting();
         app.UseCors();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.MapControllers();
 
         app.MapHub<ChatHub>("/chathub");
 

@@ -12,6 +12,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<UserEntity>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
+
         modelBuilder.Entity<ChannelMemberEntity>()
             .HasKey(cm => new { cm.UserId, cm.ChannelId });
 
