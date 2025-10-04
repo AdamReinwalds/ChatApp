@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./Sidebar.css";
 
 interface Channel {
@@ -21,27 +21,40 @@ export const Sidebar = ({
 }: SidebarProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<string>("");
+  const [channels, setChannels] = useState<Channel[]>([]);
 
-  // Mock channels data - replace with real data later
-  const channels: Channel[] = [
-    { id: "1", name: "general", type: "public", unreadCount: 3 },
-    { id: "2", name: "random", type: "public", unreadCount: 0 },
-    { id: "3", name: "tech-talk", type: "public", unreadCount: 1 },
-    { id: "4", name: "private-team", type: "private", unreadCount: 5 },
-    { id: "5", name: "gaming", type: "public", unreadCount: 0 },
-  ];
+  const getChannels = async () => {
+    try {
+      const response = await fetch("http://localhost:5095/api/channel/my", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch channels");
+      }
+      const data = await response.json();
+      return data as Channel[];
+    } catch (error) {
+      console.error("Error fetching channels:", error);
+      return [];
+    }
+  };
 
-  const filteredChannels = channels.filter((channel) =>
-    channel.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchChannels = async () => {
+      const channelList = await getChannels();
+      console.log("Fetched channels:", channelList);
+      setChannels(channelList);
+    };
+    fetchChannels();
+  }, []);
 
   const handleChannelClick = (channel: Channel) => {
     setSelectedChannel(channel.id);
     onChannelSelect?.(channel);
-  };
-
-  const handleCreateRoom = () => {
-    onCreateRoom?.();
   };
 
   const handleJoinRoom = () => {
@@ -82,7 +95,7 @@ export const Sidebar = ({
       {/* Action Buttons */}
       <div className="mb-6 space-y-2">
         <button
-          onClick={handleCreateRoom}
+          onClick={onCreateRoom}
           className="btn btn-primary btn-sm w-full"
         >
           <svg
@@ -131,7 +144,7 @@ export const Sidebar = ({
         </div>
 
         <ul className="space-y-1">
-          {filteredChannels.map((channel) => (
+          {channels.map((channel) => (
             <li key={channel.id}>
               <button
                 onClick={() => handleChannelClick(channel)}
@@ -155,7 +168,7 @@ export const Sidebar = ({
           ))}
         </ul>
 
-        {filteredChannels.length === 0 && searchQuery && (
+        {channels.length === 0 && searchQuery && (
           <div className="text-center py-4 text-base-content/50 text-sm">
             No channels found matching "{searchQuery}"
           </div>
