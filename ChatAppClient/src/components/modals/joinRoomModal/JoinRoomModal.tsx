@@ -39,31 +39,6 @@ export const JoinRoomModal = ({
     );
   }, [searchQuery, publicRooms]);
 
-  useEffect(() => {
-    if (activeTab === "browse") {
-      asyncSearch();
-    }
-  }, [activeTab]);
-
-  const asyncSearch = async () => {
-    try {
-      const res = await fetch(`http://localhost:5095/api/channel/public`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-        },
-      });
-      if (!res.ok) throw new Error("Network response was not ok");
-
-      const data = await res.json();
-      setFilteredRooms(data);
-      console.log("Fetched public rooms:", data);
-    } catch (error) {
-      console.error("Error fetching public rooms:", error);
-    }
-  };
-
   const handleJoin = (roomId: string) => {
     onJoinRoom(roomId);
     onClose();
@@ -120,13 +95,19 @@ export const JoinRoomModal = ({
                   <li key={room.id} className="room-item">
                     <div className="room-info">
                       <strong>{room.name}</strong>
-                      {room.description && <p>{room.description}</p>}
-                      <span>
+                      <p className="room-description">{room.description}</p>
+                      <span className="member-count">
+                        <img
+                          src="members-icon.png"
+                          alt="Members"
+                          className="icon"
+                        />
                         {room.memberCount}{" "}
                         {room.memberCount === 1 ? "member" : "members"}
                       </span>
                     </div>
                     <button
+                      className="join-button"
                       onClick={() => handleJoin(room.id)}
                       disabled={room.isJoined}
                     >
