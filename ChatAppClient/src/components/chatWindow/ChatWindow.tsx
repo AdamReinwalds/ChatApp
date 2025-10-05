@@ -51,7 +51,7 @@ export const ChatWindow = () => {
   };
 
   return (
-    <div className="p-6 max-w-lg mx-auto mt-10">
+    <div className="p-6 max-w-lg mx-auto mt-10 lock-scroll">
       <div className="h-96 overflow-y-scroll border rounded-lg p-4 bg-primary">
         {messages && messages.length <= 0 && (
           <small className="text-gray-400">Inga meddelanden ännu 😞</small>
