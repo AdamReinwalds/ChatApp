@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import "./JoinRoomModal.css";
 
 interface PublicRoom {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   memberCount: number;
@@ -13,7 +13,7 @@ interface PublicRoom {
 interface JoinRoomModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onJoinRoom: (roomId: string) => void;
+  onJoinRoom: (roomId: number) => void;
   publicRooms: PublicRoom[];
 }
 
@@ -39,7 +39,7 @@ export const JoinRoomModal = ({
     );
   }, [searchQuery, publicRooms]);
 
-  const handleJoin = (roomId: string) => {
+  const handleJoin = (roomId: number) => {
     onJoinRoom(roomId);
     onClose();
   };

@@ -3,7 +3,9 @@ import { ChatWindow } from "../../components/chatWindow/ChatWindow";
 import { CreateRoomModal } from "../../components/modals/createRoomModal/CreateRoomModal";
 import { JoinRoomModal } from "../../components/modals/joinRoomModal/JoinRoomModal";
 import "./Chat.css";
+import { jwtDecode } from "jwt-decode";
 import { useEffect, useState } from "react";
+import * as signalR from "@microsoft/signalr";
 import {
   getPublicRooms,
   joinChannel,
@@ -11,7 +13,7 @@ import {
 } from "../../api/ChannelApi";
 
 interface PublicRoom {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   memberCount: number;
@@ -20,7 +22,7 @@ interface PublicRoom {
 }
 
 interface Channel {
-  id: string;
+  id: number;
   name: string;
   type: "public" | "private";
   unreadCount?: number;
@@ -31,6 +33,37 @@ export const Chat = () => {
   const [isJoinRoomOpen, setIsJoinRoomOpen] = useState(false);
   const [publicRooms, setPublicRooms] = useState<PublicRoom[]>([]);
   const [myChannels, setMyChannels] = useState<Channel[]>([]);
+  const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
+  const [currentUser, setCurrentUser] = useState<string>("");
+  const [connection, setConnection] = useState<signalR.HubConnection | null>(
+    null
+  );
+
+  useEffect(() => {
+    const token = sessionStorage.getItem("token");
+    if (token) {
+      const decoded = jwtDecode<{ name: string }>(token);
+      if (decoded?.name) setCurrentUser(decoded.name);
+    }
+  }, []);
+
+  useEffect(() => {
+    const conn = new signalR.HubConnectionBuilder()
+      .withUrl("http://localhost:5095/chathub")
+      .withAutomaticReconnect()
+      .build();
+
+    conn
+      .start()
+      .then(() => console.log("Connection established"))
+      .catch((err) => console.error("Connection failed: ", err));
+
+    setConnection(conn);
+
+    return () => {
+      conn.stop().then(() => console.log("Connection stopped"));
+    };
+  }, []);
 
   // Fetch the user's own channels
   const fetchMyChannels = async () => {
@@ -56,7 +89,7 @@ export const Chat = () => {
     fetchMyChannels(); // fetch only once on mount
   }, []);
 
-  const handleJoinRoom = async (roomId: string) => {
+  const handleJoinRoom = async (roomId: number) => {
     try {
       await joinChannel(roomId);
       await fetchMyChannels(); // refresh user's channels after joining
@@ -95,8 +128,15 @@ export const Chat = () => {
         channels={myChannels}
         onCreateRoom={handleCreateModalOpen}
         onJoinRoom={handleJoinModalOpen}
+        onChannelSelect={(channel) => {
+          setCurrentChannel(channel);
+        }}
       />
-      <ChatWindow />
+      <ChatWindow
+        connection={connection}
+        currentChannel={currentChannel}
+        currentUser={currentUser}
+      />
       <CreateRoomModal isOpen={isCreateRoomOpen} onClose={handleModalClose} />
       <JoinRoomModal
         isOpen={isJoinRoomOpen}

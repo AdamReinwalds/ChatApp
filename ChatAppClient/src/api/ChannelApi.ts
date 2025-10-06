@@ -24,7 +24,7 @@ export const getMyChannels = async () => {
   return await res.json();
 };
 
-export const joinChannel = async (channelId: string) => {
+export const joinChannel = async (channelId: number) => {
   const res = await fetch(`${API_BASE}/channel/join/${channelId}`, {
     method: "POST",
     headers: getAuthHeaders(),
