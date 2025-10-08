@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { LoginForm } from "../components/auth/LoginForm";
 import { RegisterForm } from "../components/auth/RegisterForm";
-
+const API_BASE = import.meta.env.VITE_API_BASE;
 export const Auth = ({ setJwt }: { setJwt: (token: string) => void }) => {
   const [isLogin, setIsLogin] = useState(true);
 
   const handleLogin = async (username: string, password: string) => {
     try {
-      const res = await fetch("http://localhost:5095/api/auth/login", {
+      const res = await fetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -28,7 +28,7 @@ export const Auth = ({ setJwt }: { setJwt: (token: string) => void }) => {
 
   const handleRegister = async (username: string, password: string) => {
     try {
-      const res = await fetch("http://localhost:5095/api/auth/register", {
+      const res = await fetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

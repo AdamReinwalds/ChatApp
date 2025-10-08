@@ -4,14 +4,16 @@ import { CreateRoomModal } from "../../components/modals/createRoomModal/CreateR
 import { JoinRoomModal } from "../../components/modals/joinRoomModal/JoinRoomModal";
 import "./Chat.css";
 import { useEffect, useState } from "react";
+import * as signalR from "@microsoft/signalr";
 import {
   getPublicRooms,
   joinChannel,
   getMyChannels,
 } from "../../api/ChannelApi";
+import { getMessages } from "../../api/MessageApi";
 
 interface PublicRoom {
-  id: string;
+  id: number;
   name: string;
   description?: string;
   memberCount: number;
@@ -20,17 +22,44 @@ interface PublicRoom {
 }
 
 interface Channel {
-  id: string;
+  id: number;
   name: string;
   type: "public" | "private";
   unreadCount?: number;
 }
 
-export const Chat = () => {
+export const Chat = ({ currentUser }: { currentUser: string }) => {
   const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false);
   const [isJoinRoomOpen, setIsJoinRoomOpen] = useState(false);
   const [publicRooms, setPublicRooms] = useState<PublicRoom[]>([]);
   const [myChannels, setMyChannels] = useState<Channel[]>([]);
+  const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
+  const [messages, setMessages] = useState<
+    { text: string; username: string }[]
+  >([]);
+  const [connection, setConnection] = useState<signalR.HubConnection | null>(
+    null
+  );
+
+  useEffect(() => {
+    const conn = new signalR.HubConnectionBuilder()
+      .withUrl("https://localhost:7145/chathub", {
+        accessTokenFactory: () => sessionStorage.getItem("token") || "",
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    setConnection(conn);
+
+    conn
+      .start()
+      .then(() => console.log("Connection established"))
+      .catch((err) => console.error("Connection failed: ", err));
+
+    return () => {
+      conn.stop().then(() => console.log("Connection stopped"));
+    };
+  }, []);
 
   // Fetch the user's own channels
   const fetchMyChannels = async () => {
@@ -56,9 +85,10 @@ export const Chat = () => {
     fetchMyChannels(); // fetch only once on mount
   }, []);
 
-  const handleJoinRoom = async (roomId: string) => {
+  const handleJoinRoom = async (roomId: number) => {
     try {
       await joinChannel(roomId);
+      if (connection) await connection.invoke("JoinChannel", roomId);
       await fetchMyChannels(); // refresh user's channels after joining
 
       setPublicRooms((prevRooms) =>
@@ -70,6 +100,21 @@ export const Chat = () => {
     }
   };
 
+  const onChannelSelect = async (channel: Channel) => {
+    setCurrentChannel(channel);
+    try {
+      const msgs: { text: string; username: string }[] =
+        (await getMessages(channel.id)) || [];
+      const formattedMsgs = msgs.map((msg) => ({
+        text: msg.text,
+        username: msg.username,
+      }));
+      setMessages(formattedMsgs);
+    } catch (err) {
+      console.error("Failed to fetch messages for channel:", err);
+    }
+  };
+
   const handleCreateModalOpen = () => {
     setIsCreateRoomOpen(true);
     document.documentElement.classList.add("lock-scroll");
@@ -78,15 +123,16 @@ export const Chat = () => {
   const handleJoinModalOpen = async () => {
     setIsJoinRoomOpen(true);
     if (publicRooms.length === 0) {
-      await fetchPublicRooms(); // fetch only once per session
+      await fetchPublicRooms();
     }
     document.documentElement.classList.add("lock-scroll");
   };
 
-  const handleModalClose = () => {
+  const handleModalClose = async () => {
     setIsCreateRoomOpen(false);
     setIsJoinRoomOpen(false);
     document.documentElement.classList.remove("lock-scroll");
+    await fetchMyChannels();
   };
 
   return (
@@ -95,8 +141,15 @@ export const Chat = () => {
         channels={myChannels}
         onCreateRoom={handleCreateModalOpen}
         onJoinRoom={handleJoinModalOpen}
+        onChannelSelect={onChannelSelect}
       />
-      <ChatWindow />
+      <ChatWindow
+        connection={connection}
+        currentChannel={currentChannel}
+        currentUser={currentUser}
+        messages={messages}
+        setMessages={setMessages}
+      />
       <CreateRoomModal isOpen={isCreateRoomOpen} onClose={handleModalClose} />
       <JoinRoomModal
         isOpen={isJoinRoomOpen}

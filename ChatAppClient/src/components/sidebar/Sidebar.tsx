@@ -2,7 +2,7 @@ import "./Sidebar.css";
 import { useState } from "react";
 
 interface Channel {
-  id: string;
+  id: number;
   name: string;
   type: "public" | "private";
   unreadCount?: number;
@@ -22,7 +22,7 @@ export const Sidebar = ({
   onJoinRoom,
 }: SidebarProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedChannel, setSelectedChannel] = useState<string>("");
+  const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
 
   const handleChannelClick = (channel: Channel) => {
     setSelectedChannel(channel.id);
