@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace ChatApp.Business.DTOs;
 
-namespace ChatApp.Business.DTOs
+public class MessageDto
 {
-    internal class MessageDto
-    {
-    }
+    public int Id { get; set; }
+    public string Text { get; set; } = null!;
+    public string Username { get; set; } = null!;
+    public DateTime CreatedAt { get; set; }
 }

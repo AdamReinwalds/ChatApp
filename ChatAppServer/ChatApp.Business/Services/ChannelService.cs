@@ -54,15 +54,17 @@ public class ChannelService(IChannelRepository channelRepository) : IChannelServ
         return channelListDtos;
     }
 
+
+    //TODO : Create new method in repository to make sure no need to fetch all users and let ef handle count query
     //Fetch all public channels for searchbar
-    //Fixa så att dom du är member av inte displayas
-    public async Task<IEnumerable<ChannelListDto>> GetPublicChannelListDtosAsync()
+    
+    public async Task<IEnumerable<ChannelListDto>> GetPublicChannelListDtosAsync(int id)
     {
         var channels = await _channelRepository.GetAllAsync(
-            filterBy: c => !c.IsPrivate,
-            includes: c => c.Members,
+            filterBy: c => !c.IsPrivate && !c.Members.Any(m => m.UserId == id),
             orderByDescending: true,
             sortBy: c => c.CreatedAt,
+            includes: c => c.Members,
             take: 20
             );
         if (channels == null || !channels.Any())
@@ -90,7 +92,9 @@ public class ChannelService(IChannelRepository channelRepository) : IChannelServ
             filterBy: c => !c.IsPrivate && c.Name.Contains(name),
             includes: c => c.Members,
             orderByDescending: true,
-            sortBy: c => c.CreatedAt
+            sortBy: c => c.CreatedAt,
+            take: 20
+
             );
         var channelListDtos = new List<ChannelListDto>();
         foreach (var channel in channels)
@@ -133,4 +137,27 @@ public class ChannelService(IChannelRepository channelRepository) : IChannelServ
 
         return new ServiceResult { Success = true, Message = "Channel created successfully" };
     }
+
+    public async Task<ServiceResult> JoinChannelAsync(int channelId, int userId)
+    {
+        var channel = await _channelRepository.GetAsync(c => c.Id == channelId, c => c.Members);
+        if (channel == null)
+            return new ServiceResult { Success = false, Message = "Channel not found" };
+
+        if (channel.Members.Any(m => m.UserId == userId && m.Status == MembershipStatus.Accepted))
+            return new ServiceResult { Success = false, Message = "User is already a member of the channel" };
+
+        var newMember = new ChannelMemberEntity
+        {
+            UserId = userId,
+            Status = MembershipStatus.Accepted,
+            Role = ChannelRole.Member
+        };
+        channel.Members.Add(newMember);
+        var updateResult = await _channelRepository.UpdateAsync(channel);
+        if (!updateResult)
+            return new ServiceResult { Success = false, Message = "Failed to join channel" };
+        return new ServiceResult { Success = true, Message = "Joined channel successfully" };
+    }
+
 }

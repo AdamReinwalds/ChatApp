@@ -1,4 +1,4 @@
-﻿using ChatApp.Business.Interfaces;
+﻿ using ChatApp.Business.Interfaces;
 using ChatApp.Business.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +9,6 @@ namespace ChatApp.API.Controllers
     public class AuthController(IAuthService authService) : Controller
     {
         //private readonly ILogger<AuthController> _logger;
-        //private readonly IConfiguration _configuration;
         private readonly IAuthService _authService = authService;
 
         public record LoginRequest(string Username, string Password);

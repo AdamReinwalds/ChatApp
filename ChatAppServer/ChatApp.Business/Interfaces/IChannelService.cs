@@ -9,6 +9,7 @@ namespace ChatApp.Business.Interfaces
         Task<ChannelDetailDto> GetChannelAsync(int id);
         Task<IEnumerable<ChannelListDto>> GetChannelListDtosAsync(int userId);
         Task<IEnumerable<ChannelListDto>> GetPublicChannelsByNameSearch(string name);
-        Task<IEnumerable<ChannelListDto>> GetPublicChannelListDtosAsync();
+        Task<IEnumerable<ChannelListDto>> GetPublicChannelListDtosAsync(int id);
+        Task<ServiceResult> JoinChannelAsync(int channelId, int userId);
     }
 }

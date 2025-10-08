@@ -14,6 +14,7 @@ public class ChannelController(IChannelService channelService) : Controller
 {
     private readonly IChannelService _channelService = channelService;
     public record CreateChannelRequest(string Name, string? Description, bool IsPrivate);
+
     [HttpPost("create")]
     public async Task<IActionResult> CreateChannel(CreateChannelRequest request)
     {
@@ -37,7 +38,7 @@ public class ChannelController(IChannelService channelService) : Controller
         return Ok(result);
     }
     [HttpGet("my")]
-    public async Task<IActionResult> GetChannels()
+    public async Task<IActionResult> GetMyChannels()
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -48,7 +49,8 @@ public class ChannelController(IChannelService channelService) : Controller
     [HttpGet("public")]
     public async Task<IActionResult> GetPublicChannels()
     {
-        var channels = await _channelService.GetPublicChannelListDtosAsync();
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var channels = await _channelService.GetPublicChannelListDtosAsync(int.Parse(userIdClaim!));
         return Ok(channels);
     }
 
@@ -59,5 +61,17 @@ public class ChannelController(IChannelService channelService) : Controller
             return BadRequest("Search term is required");
         var channels = await _channelService.GetPublicChannelsByNameSearch(name);
         return Ok(channels);
+    }
+
+    [HttpPost("join/{id}")]
+    public async Task<IActionResult> JoinChannel(string id)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null)
+            return Unauthorized("User ID claim is missing");
+        var result = await _channelService.JoinChannelAsync(int.Parse(id), int.Parse(userIdClaim));
+        if (!result.Success)
+            return BadRequest(result.Message);
+        return Ok(result);
     }
 }
