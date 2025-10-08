@@ -33,3 +33,26 @@ export const joinChannel = async (channelId: number) => {
   if (!res.ok) throw new Error(data.message || "Failed to join channel");
   return data;
 };
+
+export const createChannel = async (
+  roomName: string,
+  description: string,
+  isPrivate: boolean
+) => {
+  try {
+    const response = await fetch(`${API_BASE}/channel/create`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ name: roomName, description, isPrivate }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to create room");
+    }
+
+    const data = await response.json();
+    console.log("Room created:", data);
+  } catch (error) {
+    console.error("Error creating room:", error);
+  }
+};

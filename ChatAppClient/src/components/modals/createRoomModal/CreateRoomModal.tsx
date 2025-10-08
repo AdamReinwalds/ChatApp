@@ -1,5 +1,6 @@
 import React from "react";
 import "./CreateRoomModal.css";
+import { createChannel } from "../../../api/ChannelApi";
 
 export const CreateRoomModal = ({
   onClose,
@@ -16,36 +17,9 @@ export const CreateRoomModal = ({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    await handleCreateRoom(channelName, description, isPrivate);
+    await createChannel(channelName, description, isPrivate);
     setIsLoading(false);
-
     onClose();
-  };
-
-  const handleCreateRoom = async (
-    roomName: string,
-    description: string,
-    isPrivate: boolean
-  ) => {
-    try {
-      const response = await fetch("http://localhost:5095/api/channel/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ name: roomName, description, isPrivate }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create room");
-      }
-
-      const data = await response.json();
-      console.log("Room created:", data);
-    } catch (error) {
-      console.error("Error creating room:", error);
-    }
   };
 
   if (!isOpen) return null;

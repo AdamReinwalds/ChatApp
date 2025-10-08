@@ -5,6 +5,10 @@ import * as SignalR from "@microsoft/signalr";
 interface ChatWindowProps {
   connection: SignalR.HubConnection | null;
   currentUser: string;
+  messages: { text: string; username: string }[];
+  setMessages: React.Dispatch<
+    React.SetStateAction<{ text: string; username: string }[]>
+  >;
   currentChannel: {
     id: number;
     name: string;
@@ -16,10 +20,9 @@ export const ChatWindow = ({
   connection,
   currentChannel,
   currentUser,
+  messages = [],
+  setMessages,
 }: ChatWindowProps) => {
-  const [messages, setMessages] = useState<{ text: string; user: string }[]>(
-    []
-  );
   const [message, setMessage] = useState<string>("");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -30,16 +33,18 @@ export const ChatWindow = ({
       const cleanText = DOMPurify.sanitize(msgDto.text);
       const cleanUser = DOMPurify.sanitize(msgDto.username);
       if (!cleanText || !cleanUser) return;
+
       setMessages((prevMessages) => [
         ...prevMessages,
-        { text: cleanText, user: cleanUser },
+        { text: cleanText, username: cleanUser },
       ]);
     };
+
     connection.on("ReceiveMessage", receiveHandler);
     return () => {
       connection.off("ReceiveMessage", receiveHandler);
     };
-  }, [connection]);
+  }, [connection, setMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -66,13 +71,13 @@ export const ChatWindow = ({
             <div
               key={i}
               className={`chat ${
-                m.user === currentUser ? "chat-end" : "chat-start"
+                m.username === currentUser ? "chat-end" : "chat-start"
               }`}
             >
-              <div className="chat-header">{m.user}</div>
+              <div className="chat-header">{m.username}</div>
               <div
                 className={`chat-bubble ${
-                  m.user === currentUser ? "bg-gray-700" : ""
+                  m.username === currentUser ? "bg-gray-700" : ""
                 }`}
               >
                 {m.text}

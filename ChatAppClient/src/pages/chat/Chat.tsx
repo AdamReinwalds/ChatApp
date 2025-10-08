@@ -3,7 +3,6 @@ import { ChatWindow } from "../../components/chatWindow/ChatWindow";
 import { CreateRoomModal } from "../../components/modals/createRoomModal/CreateRoomModal";
 import { JoinRoomModal } from "../../components/modals/joinRoomModal/JoinRoomModal";
 import "./Chat.css";
-import { jwtDecode } from "jwt-decode";
 import { useEffect, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import {
@@ -11,6 +10,7 @@ import {
   joinChannel,
   getMyChannels,
 } from "../../api/ChannelApi";
+import { getMessages } from "../../api/MessageApi";
 
 interface PublicRoom {
   id: number;
@@ -28,37 +28,33 @@ interface Channel {
   unreadCount?: number;
 }
 
-export const Chat = () => {
+export const Chat = ({ currentUser }: { currentUser: string }) => {
   const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false);
   const [isJoinRoomOpen, setIsJoinRoomOpen] = useState(false);
   const [publicRooms, setPublicRooms] = useState<PublicRoom[]>([]);
   const [myChannels, setMyChannels] = useState<Channel[]>([]);
   const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
-  const [currentUser, setCurrentUser] = useState<string>("");
+  const [messages, setMessages] = useState<
+    { text: string; username: string }[]
+  >([]);
   const [connection, setConnection] = useState<signalR.HubConnection | null>(
     null
   );
 
   useEffect(() => {
-    const token = sessionStorage.getItem("token");
-    if (token) {
-      const decoded = jwtDecode<{ name: string }>(token);
-      if (decoded?.name) setCurrentUser(decoded.name);
-    }
-  }, []);
-
-  useEffect(() => {
     const conn = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5095/chathub")
+      .withUrl("https://localhost:7145/chathub", {
+        accessTokenFactory: () => sessionStorage.getItem("token") || "",
+      })
       .withAutomaticReconnect()
       .build();
+
+    setConnection(conn);
 
     conn
       .start()
       .then(() => console.log("Connection established"))
       .catch((err) => console.error("Connection failed: ", err));
-
-    setConnection(conn);
 
     return () => {
       conn.stop().then(() => console.log("Connection stopped"));
@@ -92,6 +88,7 @@ export const Chat = () => {
   const handleJoinRoom = async (roomId: number) => {
     try {
       await joinChannel(roomId);
+      if (connection) await connection.invoke("JoinChannel", roomId);
       await fetchMyChannels(); // refresh user's channels after joining
 
       setPublicRooms((prevRooms) =>
@@ -103,6 +100,21 @@ export const Chat = () => {
     }
   };
 
+  const onChannelSelect = async (channel: Channel) => {
+    setCurrentChannel(channel);
+    try {
+      const msgs: { text: string; username: string }[] =
+        (await getMessages(channel.id)) || [];
+      const formattedMsgs = msgs.map((msg) => ({
+        text: msg.text,
+        username: msg.username,
+      }));
+      setMessages(formattedMsgs);
+    } catch (err) {
+      console.error("Failed to fetch messages for channel:", err);
+    }
+  };
+
   const handleCreateModalOpen = () => {
     setIsCreateRoomOpen(true);
     document.documentElement.classList.add("lock-scroll");
@@ -111,15 +123,16 @@ export const Chat = () => {
   const handleJoinModalOpen = async () => {
     setIsJoinRoomOpen(true);
     if (publicRooms.length === 0) {
-      await fetchPublicRooms(); // fetch only once per session
+      await fetchPublicRooms();
     }
     document.documentElement.classList.add("lock-scroll");
   };
 
-  const handleModalClose = () => {
+  const handleModalClose = async () => {
     setIsCreateRoomOpen(false);
     setIsJoinRoomOpen(false);
     document.documentElement.classList.remove("lock-scroll");
+    await fetchMyChannels();
   };
 
   return (
@@ -128,14 +141,14 @@ export const Chat = () => {
         channels={myChannels}
         onCreateRoom={handleCreateModalOpen}
         onJoinRoom={handleJoinModalOpen}
-        onChannelSelect={(channel) => {
-          setCurrentChannel(channel);
-        }}
+        onChannelSelect={onChannelSelect}
       />
       <ChatWindow
         connection={connection}
         currentChannel={currentChannel}
         currentUser={currentUser}
+        messages={messages}
+        setMessages={setMessages}
       />
       <CreateRoomModal isOpen={isCreateRoomOpen} onClose={handleModalClose} />
       <JoinRoomModal
