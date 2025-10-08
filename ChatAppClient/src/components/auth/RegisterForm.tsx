@@ -10,7 +10,6 @@ export const RegisterForm = ({
   onRegister,
 }: RegisterFormProps) => {
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,12 +28,6 @@ export const RegisterForm = ({
           placeholder="Set Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-        />
-        <input
-          type="email"
-          placeholder="Set Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
         />
         <input
           type="password"
