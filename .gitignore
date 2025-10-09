@@ -43,3 +43,11 @@ appsettings.Production.json
 .idea
 .DS_Store
 Thumbs.db
+
+# ======================
+# Certificates
+# ======================
+certs/*
+!certs/README.txt
+
+
