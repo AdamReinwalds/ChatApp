@@ -1,14 +1,10 @@
 ﻿namespace ChatApp.API.Middleware;
 
-public class ExceptionMiddleware
+public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ExceptionMiddleware> _logger;
-    public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<ExceptionMiddleware> _logger = logger;
+
     public async Task InvokeAsync(HttpContext httpContext)
     {
         try
@@ -18,8 +14,8 @@ public class ExceptionMiddleware
         catch (Exception ex)
         {
             _logger.LogError(ex, "An unhandled exception occurred.{Path}", httpContext.Request.Path);
-            httpContext.Response.StatusCode = 500;
             httpContext.Response.ContentType = "application/json";
+            httpContext.Response.StatusCode = 500;
             var response = new { message = "An internal server error occurred." };
             await httpContext.Response.WriteAsJsonAsync(response);
         }
