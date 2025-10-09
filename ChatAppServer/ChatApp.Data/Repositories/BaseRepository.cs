@@ -42,7 +42,7 @@ public abstract class BaseRepository<TEntity>(AppDbContext context, ILogger<Base
         }
          
     }
-    public virtual async Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> findBy, params Expression<Func<TEntity, object>>[] includes)
+    public virtual async Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> findBy, params Expression<Func<TEntity, object>>[] includes)
     {
         try
         {
@@ -53,7 +53,7 @@ public abstract class BaseRepository<TEntity>(AppDbContext context, ILogger<Base
                     query = query.Include(include);
 
             var entity = await query.FirstOrDefaultAsync(findBy);
-            return entity ?? null!;
+            return entity ?? null;
         }
         catch (Exception ex)
         {

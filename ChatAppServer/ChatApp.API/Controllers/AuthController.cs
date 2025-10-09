@@ -8,7 +8,6 @@ namespace ChatApp.API.Controllers
     [Route("api/[controller]")]
     public class AuthController(IAuthService authService, ILogger<AuthController> logger) : Controller
     {
-        //private readonly ILogger<AuthController> _logger;
         private readonly IAuthService _authService = authService;
         private readonly ILogger<AuthController> _logger = logger;
 
