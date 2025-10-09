@@ -9,15 +9,23 @@ namespace ChatApp.API.Controllers;
 [Route("api/[controller]")]
 
 [Authorize]
-public class MessageController(IMessageService messageService) : Controller
+public class MessageController(IMessageService messageService, ILogger<MessageController> logger) : Controller
 {
     private readonly IMessageService _messageService = messageService;
+    private readonly ILogger<MessageController> _logger = logger;
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMessages(int id)
     {
-        var messages = await _messageService.GetMessagesByChannelIdAsync(id);
-        
-        return Ok(messages);
+        try
+        {
+            var messages = await _messageService.GetMessagesByChannelIdAsync(id);
+            return Ok(messages);
+        }
+        catch(Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching messages for channel ID {ChannelId}", id);
+            throw;
+        }
     }
 }

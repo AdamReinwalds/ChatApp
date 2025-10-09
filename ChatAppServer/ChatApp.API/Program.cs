@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using ChatApp.API.Middleware;
 
 namespace ChatApp.API;
 
@@ -17,6 +18,9 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        //builder.Logging.ClearProviders();
+        builder.Logging.AddLog4Net("log4net.config");
 
         if (!builder.Environment.IsDevelopment())
         {
@@ -90,6 +94,7 @@ public class Program
         builder.Services.AddAuthorization();
 
         var app = builder.Build();
+        app.UseMiddleware<ExceptionMiddleware>();
 
         if (!app.Environment.IsDevelopment())
         {
@@ -97,6 +102,7 @@ public class Program
         }
         app.UseRouting();
         app.UseCors();
+
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();

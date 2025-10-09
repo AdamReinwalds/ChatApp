@@ -4,17 +4,25 @@ using ChatApp.Data.Enums;
 using ChatApp.Business.Interfaces;
 using ChatApp.Data.Entities;
 using ChatApp.Business.Results;
+using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChatApp.Business.Services;
 
-public class ChannelService(IChannelRepository channelRepository) : IChannelService
+public class ChannelService(IChannelRepository channelRepository, ILogger<ChannelService> logger) : IChannelService
 {
     private readonly IChannelRepository _channelRepository = channelRepository;
+    private readonly ILogger<ChannelService> _logger = logger;
 
     //Fetch specific channel with messages and members
     public async Task<ChannelDetailDto> GetChannelAsync(int id)
     {
         var channel = await _channelRepository.GetAsync(c => c.Id == id);
+        if (channel == null)
+        {
+            _logger.LogWarning("Channel with ID {ChannelId} not found.", id);
+            return null!;
+        }
         var channelDto = new ChannelDetailDto
         {
             Id = channel.Id,
@@ -36,7 +44,10 @@ public class ChannelService(IChannelRepository channelRepository) : IChannelServ
             );
 
         if(channels == null || !channels.Any())
+        {
+            _logger.LogInformation("No channels found for user with ID {UserId}.", userId);
             return Enumerable.Empty<ChannelListDto>();
+        }
 
 
         var channelListDtos = new List<ChannelListDto>();
@@ -68,7 +79,10 @@ public class ChannelService(IChannelRepository channelRepository) : IChannelServ
             take: 20
             );
         if (channels == null || !channels.Any())
+        {
+            _logger.LogInformation("No public channels found for user with ID {UserId}.", id);
             return Enumerable.Empty<ChannelListDto>();
+        }
 
         var channelListDtos = new List<ChannelListDto>();
         foreach (var channel in channels)
@@ -88,6 +102,11 @@ public class ChannelService(IChannelRepository channelRepository) : IChannelServ
     //Get channels by name search
     public async Task<IEnumerable<ChannelListDto>> GetPublicChannelsByNameSearch(string name)
     {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            _logger.LogWarning("Search term is empty or whitespace.");
+            return Enumerable.Empty<ChannelListDto>();
+        }
         var channels = await _channelRepository.GetAllAsync(
             filterBy: c => !c.IsPrivate && c.Name.Contains(name),
             includes: c => c.Members,
@@ -113,6 +132,9 @@ public class ChannelService(IChannelRepository channelRepository) : IChannelServ
 
     public async Task<ServiceResult> CreateChannelAsync(CreateChannelDto channelDto)
     {
+        if (string.IsNullOrWhiteSpace(channelDto.Name))
+            return new ServiceResult { Success = false, Message = "Channel name is required" };
+
         var channel = new TextChannelEntity
         {
             Name = channelDto.Name,
@@ -129,23 +151,39 @@ public class ChannelService(IChannelRepository channelRepository) : IChannelServ
                 }
             }
         };
-
-        var result = await _channelRepository.AddAsync(channel);
-
-        if (result == false)
-            return new ServiceResult { Success = false, Message = "Failed to create channel" };
-
-        return new ServiceResult { Success = true, Message = "Channel created successfully" };
+        try
+        {
+            var result = await _channelRepository.AddAsync(channel);
+            if (!result)
+            {
+                _logger.LogError("Failed to create channel {ChannelName} by user {UserId}", channelDto.Name, channelDto.CreatedByUserId);
+                return new ServiceResult { Success = false, Message = "Failed to create channel" };
+            }
+            _logger.LogInformation("Channel {ChannelName} created successfully by user {UserId}", channelDto.Name, channelDto.CreatedByUserId);
+            return new ServiceResult { Success = true, Message = "Channel created successfully" };
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error while creating channel {ChannelName} by user {UserId}", channelDto.Name, channelDto.CreatedByUserId);
+            return new ServiceResult { Success = false, Message = "Error creating channel" };
+        }
     }
 
     public async Task<ServiceResult> JoinChannelAsync(int channelId, int userId)
     {
         var channel = await _channelRepository.GetAsync(c => c.Id == channelId, c => c.Members);
         if (channel == null)
+        {
+            _logger.LogWarning("Channel with ID {ChannelId} not found for user {UserId}", channelId, userId);
             return new ServiceResult { Success = false, Message = "Channel not found" };
+        }
 
         if (channel.Members.Any(m => m.UserId == userId && m.Status == MembershipStatus.Accepted))
+        {
+
+            _logger.LogWarning("User {UserId} is already a member of channel {ChannelId}", userId, channelId);
             return new ServiceResult { Success = false, Message = "User is already a member of the channel" };
+        }
 
         var newMember = new ChannelMemberEntity
         {
