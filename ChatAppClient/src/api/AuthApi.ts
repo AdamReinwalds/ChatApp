@@ -13,12 +13,14 @@ export const registerUser = async (username: string, password: string) => {
       }),
     });
     if (!res.ok) {
-      throw new Error("Registration failed");
+      return { success: false, message: "Registration failed" };
     }
     const data = await res.json();
     console.log("Registration successful:", data);
+    return { success: true };
   } catch (error) {
     console.log("Error:", error);
+    return { success: false, message: "Registration failed" };
   }
 };
 
@@ -32,12 +34,13 @@ export const loginUser = async (username: string, password: string) => {
       body: JSON.stringify({ username, password }),
     });
     if (!res.ok) {
-      throw new Error("Login failed");
+      return { success: false, message: "Login failed" };
     }
     const data = await res.json();
     sessionStorage.setItem("token", data.token);
-    console.log("Login successful:", data);
+    return { success: true };
   } catch (error) {
     console.error("Error:", error);
+    return { success: false, message: "Login failed" };
   }
 };

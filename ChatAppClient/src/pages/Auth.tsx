@@ -15,8 +15,10 @@ export const Auth = ({ setJwt }: { setJwt: (token: string) => void }) => {
   };
 
   const handleRegister = async (username: string, password: string) => {
-    await registerUser(username, password);
-    await handleLogin(username, password);
+    const result = await registerUser(username, password);
+    if (result.success) {
+      await handleLogin(username, password);
+    }
   };
 
   const handleSwitchToRegister = () => {
